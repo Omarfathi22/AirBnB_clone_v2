@@ -1,79 +1,96 @@
-# Ensure Nginx is installed and service is running
-package { 'nginx':
-  ensure => installed,
-}
+# Configures a web server for deployment of web_static.
 
-service { 'nginx':
-  ensure => running,
-  enable => true,
-}
-
-# Create directories for web_static and its releases
-file { '/data':
-  ensure => 'directory',
-}
-
-file { '/data/web_static':
-  ensure => 'directory',
-}
-
-file { '/data/web_static/releases':
-  ensure => 'directory',
-}
-
-file { '/data/web_static/shared':
-  ensure => 'directory',
-}
-
-# Create a symbolic link /data/web_static/current pointing to /data/web_static/releases/test
-file { '/data/web_static/current':
-  ensure  => 'link',
-  target  => '/data/web_static/releases/test',
-  require => File['/data/web_static/releases'],
-}
-
-# Deploy a test index.html file
-file { '/data/web_static/releases/test/index.html':
-  ensure  => 'file',
-  content => '<html>
-               <head>
-               </head>
-               <body>
-                 Holberton School
-               </body>
-             </html>',
-}
-
-# Configure Nginx to serve hbnb_static
-file { '/etc/nginx/sites-available/default':
-  ensure  => 'file',
-  content => "
-server {
+# Nginx configuration file
+$nginx_conf = "server {
     listen 80 default_server;
     listen [::]:80 default_server;
-
-    root /var/www/html;
-
-    index index.html index.htm index.nginx-debian.html;
-
-    server_name _;
+    add_header X-Served-By ${hostname};
+    root   /var/www/html;
+    index  index.html index.htm;
 
     location /hbnb_static {
         alias /data/web_static/current;
-        index index.html;
+        index index.html index.htm;
     }
 
-    location / {
-        try_files $uri $uri/ =404;
+    location /redirect_me {
+        return 301 http://cuberule.com/;
     }
-}
-  ",
-  notify => Service['nginx'],
+
+    error_page 404 /404.html;
+    location /404 {
+      root /var/www/html;
+      internal;
+    }
+}"
+
+# Ensure Nginx package is present and managed by apt provider
+package { 'nginx':
+  ensure   => 'present',
+  provider => 'apt'
+} ->
+
+# Ensure directory structure for web_static deployment
+file { '/data':
+  ensure  => 'directory'
+} ->
+
+file { '/data/web_static':
+  ensure => 'directory'
+} ->
+
+file { '/data/web_static/releases':
+  ensure => 'directory'
+} ->
+
+file { '/data/web_static/releases/test':
+  ensure => 'directory'
+} ->
+
+file { '/data/web_static/shared':
+  ensure => 'directory'
+} ->
+
+# Create a test index.html file for initial deployment
+file { '/data/web_static/releases/test/index.html':
+  ensure  => 'present',
+  content => "Holberton School Puppet\n"
+} ->
+
+# Create symbolic link 'current' pointing to the latest deployment
+file { '/data/web_static/current':
+  ensure => 'link',
+  target => '/data/web_static/releases/test'
+} ->
+
+# Ensure /var/www directory structure for static content
+file { '/var/www':
+  ensure => 'directory'
+} ->
+
+file { '/var/www/html':
+  ensure => 'directory'
+} ->
+
+# Create default index.html and 404.html pages
+file { '/var/www/html/index.html':
+  ensure  => 'present',
+  content => "Holberton School Nginx\n"
+} ->
+
+file { '/var/www/html/404.html':
+  ensure  => 'present',
+  content => "Ceci n'est pas une page\n"
+} ->
+
+# Configure Nginx default site configuration
+file { '/etc/nginx/sites-available/default':
+  ensure  => 'present',
+  content => $nginx_conf
+} ->
+
+# Restart Nginx to apply configuration changes
+exec { 'nginx restart':
+  path => '/etc/init.d/'
 }
 
-# Notify Nginx to reload its configuration after making changes
-exec { 'nginx-reload':
-  command     => 'systemctl reload nginx',
-  refreshonly => true,
-  subscribe   => File['/etc/nginx/sites-available/default'],
-}

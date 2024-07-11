@@ -1,58 +1,64 @@
-#!/usr/bin/env python3
-"""
-Fabric script that distributes an archive to your web servers using do_deploy.
-"""
-from fabric import task
-import os
+#!/usr/bin/python3
+# Fabfile to distribute an archive to a web server.
+import os.path
+from fabric.api import env
+from fabric.api import put
+from fabric.api import run
 
-env.hosts = ['<your_web_server_ip>']
+# Define the hosts where the deployment will occur
+env.hosts = ["104.196.168.90", "35.196.46.172"]
 
-@task
-def do_deploy(c, archive_path):
-    """
-    Distributes an archive to web servers.
+def do_deploy(archive_path):
+    """Distributes an archive to a web server.
 
     Args:
-        archive_path (str): Path to the archive file to deploy.
-
+        archive_path (str): The path of the archive to distribute.
     Returns:
-        bool: True if deployment successful, False otherwise.
+        If the file doesn't exist at archive_path or an error occurs - False.
+        Otherwise - True.
     """
-    if not os.path.exists(archive_path):
-        print(f"Archive not found: {archive_path}")
+    # Check if the archive file exists
+    if os.path.isfile(archive_path) is False:
         return False
+    
+    # Extract file and directory names from the archive path
+    file = archive_path.split("/")[-1]
+    name = file.split(".")[0]
 
-    try:
-        archive_filename = os.path.basename(archive_path)
-        archive_no_ext = archive_filename.replace('.tgz', '')
-        remote_path = '/tmp/' + archive_filename
-        release_path = '/data/web_static/releases/' + archive_no_ext
-
-        # Upload the archive
-        c.put(archive_path, remote_path)
-
-        # Create necessary directories
-        c.run(f"mkdir -p {release_path}")
-
-        # Uncompress the archive
-        c.run(f"tar -xzf {remote_path} -C {release_path}")
-
-        # Remove the archive
-        c.run(f"rm {remote_path}")
-
-        # Move contents to release_path
-        c.run(f"mv {release_path}/web_static/* {release_path}/")
-
-        # Remove redundant folder
-        c.run(f"rm -rf {release_path}/web_static")
-
-        # Update symlink
-        c.run(f"rm -rf /data/web_static/current")
-        c.run(f"ln -s {release_path} /data/web_static/current")
-
-        print("New version deployed!")
-        return True
-
-    except Exception as e:
-        print(f"Deployment failed: {str(e)}")
+    # Upload the archive to /tmp/ directory on the remote server
+    if put(archive_path, "/tmp/{}".format(file)).failed is True:
         return False
+    
+    # Remove existing deployment directory
+    if run("rm -rf /data/web_static/releases/{}/".format(name)).failed is True:
+        return False
+    
+    # Create directory for the new deployment
+    if run("mkdir -p /data/web_static/releases/{}/".format(name)).failed is True:
+        return False
+    
+    # Extract the archive into the deployment directory
+    if run("tar -xzf /tmp/{} -C /data/web_static/releases/{}/".format(file, name)).failed is True:
+        return False
+    
+    # Delete the uploaded archive file from /tmp/ directory
+    if run("rm /tmp/{}".format(file)).failed is True:
+        return False
+    
+    # Move the contents of the web_static subdirectory to the deployment directory
+    if run("mv /data/web_static/releases/{}/web_static/* /data/web_static/releases/{}/".format(name, name)).failed is True:
+        return False
+    
+    # Remove the now-empty web_static subdirectory
+    if run("rm -rf /data/web_static/releases/{}/web_static".format(name)).failed is True:
+        return False
+    
+    # Update the symbolic link to point to the new deployment directory
+    if run("rm -rf /data/web_static/current").failed is True:
+        return False
+    if run("ln -s /data/web_static/releases/{}/ /data/web_static/current".format(name)).failed is True:
+        return False
+    
+    # Deployment successful
+    return True
+

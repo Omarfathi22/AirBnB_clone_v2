@@ -1,39 +1,34 @@
 #!/usr/bin/python3
-"""
-Fabric script that deletes out-of-date archives, using the function do_clean:
-"""
-from math import gcd
-from fabric.api import env, local, run
-from datetime import datetime
+# Fabfile to delete out-of-date archives.
 import os
+from fabric.api import *
 
-env.hosts = ['<IP web-01>', '<IP web-02>']  # Replace with actual IP addresses
-env.user = 'ubuntu'  # Replace with the SSH username
-env.key_filename = '~/.ssh/my_ssh_private_key'  # Replace with the path to your SSH private key
+# Define the hosts where the cleanup will occur
+env.hosts = ["104.196.168.90", "35.196.46.172"]
 
 def do_clean(number=0):
-    """
-    Deletes out-of-date archives in local and remote directories.
-    """
-    number = int(number)
-    if number < 1:
-        number = 1
-    try:
-        # Clean local versions directory
-        with gcd('versions'):
-            local_archives = local('ls -tr | grep web_static', capture=True).split('\n')
-            if len(local_archives) > number:
-                archives_to_delete = local_archives[:-number]
-                for archive in archives_to_delete:
-                    local('rm -f {}'.format(archive))
+    """Delete out-of-date archives.
 
-        # Clean remote releases directory
-        with cd('/data/web_static/releases'): # type: ignore
-            remote_archives = run('ls -tr | grep web_static').split('\n')
-            if len(remote_archives) > number:
-                archives_to_delete = remote_archives[:-number]
-                for archive in archives_to_delete:
-                    run('rm -rf {}'.format(archive))
-        return True
-    except Exception as e:
-        return False
+    Args:
+        number (int): The number of archives to keep.
+
+    If number is 0 or 1, keeps only the most recent archive. If
+    number is 2, keeps the most and second-most recent archives,
+    etc.
+    """
+    # Convert number to integer
+    number = 1 if int(number) == 0 else int(number)
+
+    # Clean up local archives in 'versions' directory
+    archives = sorted(os.listdir("versions"))
+    [archives.pop() for i in range(number)]
+    with lcd("versions"):
+        [local("rm ./{}".format(a)) for a in archives]
+
+    # Clean up remote archives in '/data/web_static/releases' directory
+    with cd("/data/web_static/releases"):
+        archives = run("ls -tr").split()  # List all archives sorted by time
+        archives = [a for a in archives if "web_static_" in a]  # Filter out relevant archives
+        [archives.pop() for i in range(number)]  # Remove archives beyond specified number
+        [run("rm -rf ./{}".format(a)) for a in archives]  # Delete the remaining archives
+
