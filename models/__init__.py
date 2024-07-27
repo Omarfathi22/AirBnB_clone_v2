@@ -1,16 +1,22 @@
 #!/usr/bin/python3
 """This script instantiates a storage object based on the environment variable HBNB_TYPE_STORAGE."""
 
-import os
-
-from models.engine.db_storage import DBStorage  # Importing the DBStorage class
-from models.engine.file_storage import FileStorage  # Importing the FileStorage class
-
-# Conditionally instantiate either DBStorage or FileStorage based on environment variable
-storage = DBStorage() if os.getenv('HBNB_TYPE_STORAGE') == 'db' else FileStorage()
-
+-> If the environmental variable 'HBNB_TYPE_STORAGE' is set to 'db',
+   instantiates a database storage engine (DBStorage).
+-> Otherwise, instantiates a file storage engine (FileStorage).
 """
-A unique instance of either FileStorage or DBStorage, depending on the value of HBNB_TYPE_STORAGE.
-"""
+from os import getenv
 
-storage.reload()  # Reloads the storage, initializing the session and database engine
+# Check if the environment variable for database storage is set
+if getenv("HBNB_TYPE_STORAGE") == "db":
+    from models.engine.db_storage import DBStorage
+    # Import pymysql or mysqlclient here to handle MySQL connections
+    import pymysql
+    pymysql.install_as_MySQLdb()
+    storage = DBStorage()
+else:
+    from models.engine.file_storage import FileStorage
+    storage = FileStorage()
+
+# Reload storage configuration
+storage.reload)
