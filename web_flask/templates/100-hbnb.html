@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HBNB</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/3-footer.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/3-header.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/4-common.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/6-filters.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/8-places.css') }}">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1><a href="/">HBNB</a></h1>
+            <ul>
+                <li><a href="/hbnb">Home</a></li>
+                <li><a href="#">My Places</a></li>
+                <li><a href="#">My Bookings</a></li>
+                <li><a href="#">About Us</a></li>
+                <li><a href="#">Log Out</a></li>
+            </ul>
+        </div>
+    </header>
+    <div class="filters">
+        <div class="container">
+            <div class="filters-box">
+                <div class="filter">
+                    <h3>States</h3>
+                    <h4>&nbsp;</h4>
+                </div>
+                <div class="filter">
+                    <h3>Amenities</h3>
+                    <h4>&nbsp;</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="places">
+        <div class="container">
+            <h1>Places</h1>
+            <div class="places-box">
+                {% for place in places %}
+                <article class="place">
+                    <div class="title">
+                        <h2>{{ place.name }}</h2>
+                        <div class="price_by_night">${{ place.price_by_night }}</div>
+                    </div>
+                    <div class="information">
+                        <div class="max_guest">
+                            <i class="fa fa-users" aria-hidden="true"></i>
+                            <br />
+                            {{ place.max_guest }} Guests
+                        </div>
+                        <div class="number_rooms">
+                            <i class="fa fa-bed" aria-hidden="true"></i>
+                            <br />
+                            {{ place.number_rooms }} Bedrooms
+                        </div>
+                        <div class="number_bathrooms">
+                            <i class="fa fa-bath" aria-hidden="true"></i>
+                            <br />
+                            {{ place.number_bathrooms }} Bathroom{% if place.number_bathrooms > 1 %}s{% endif %}
+                        </div>
+                    </div>
+                    <div class="description">
+                        {{ place.description | safe }}
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 HBNB - All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>
+
